@@ -8,14 +8,20 @@ package bili.study.thread;
  */
 public class SingletonDemo {
 
-    private static SingletonDemo instance = null;
+    private static volatile SingletonDemo instance = null;
 
     private SingletonDemo() {
         System.out.println(Thread.currentThread().getName() + "\t我是构造方法SingletonDemo()");
     }
+
+    // DCL (Double Check Lock双端检索机制)
     public static SingletonDemo getInstance() {
         if (instance == null) {
-            instance = new SingletonDemo();
+            synchronized (SingletonDemo.class) {
+                if (instance == null) {
+                    instance = new SingletonDemo();
+                }
+            }
         }
         return instance;
     }
