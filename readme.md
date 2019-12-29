@@ -55,7 +55,7 @@
 ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/rearrangement.png) 
 
   - 单例模式volatile分析
-    DCL(双端检锁) 机制不一定线程安全,原因是有指令重排的存在,加入volatile可以禁止指令重排
+    - DCL(双端检锁) 机制不一定线程安全,原因是有指令重排的存在,加入volatile可以禁止指令重排
       原因在于某一个线程在执行到第一次检测,读取到的instance不为null时,instance的引用对象可能没有完成初始化.
     instance=new SingletonDem(); 可以分为以下步骤(伪代码)
      
@@ -69,3 +69,35 @@
     instance(memory);//2.初始化对象
     但是指令重排只会保证串行语义的执行一致性(单线程) 并不会关心多线程间的语义一致性
     所以当一条线程访问instance不为null时,由于instance实例未必完成初始化,也就造成了线程安全问题.
+
+## CAS是什么
+  - CAS的全称为Compare-And-Swap，它是一条CPU并发原语。它的功能是判断内存某个位置的值是否为预期值，如果是则更改为新的值，这个过程是原子的。
+  - CAS并发原语体现在Java语言中就是sun.misc.Unsafe类中的各个方法。调用Unsafe类中的CAS方法，JVM会帮助我们实现出CAS汇编指令。这是一种完全依赖于硬件的功能，通过它实现了原子操作。再次强调，由于CAS是一种系统原语，原语属于操作系统用语范畴，是由若干指令组成的，用于完成某个功能的一个过程，并且原语的执行必须是连续的，在执行过程中不允许被中断，也就是说CAS是一条CPU的原子指令，不会造成所谓的数据不一致问题。
+    - AtomicInteger.java
+  ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/casGetAndInc.png) 
+    - Unsafe.java
+  ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/casGetAndAdd.png) 
+  - var1 AtomicInteger 对象本身
+  - var2 该对象值的引用地址
+  - var4 需要变动的数量
+  - var5 是用过var1 var2找出的主内存中真实的值
+  - 用该对象当前的值与var5比较：如果相同，更新var5 + var4并且返回true，如果不同，继续取值然后再比较，直到更新完成
+  - 假设线程A与线程B两个线程同时执行getAndAddInt操作（分别跑在不同的cpu上）：
+     - AtomicInteger 里面的value原始值为3，即主内存中的AtomicInteger的value为3，根据JMM模型，线程A和线程B各自持有一份值为3的value的副本分别到各自的工作内存
+     - 线程A通过getIntVolatile（var1，var2）拿到value值3，这时线程A被挂起
+     - 线程B也通过getIntVolatile(var1, var2)方法获取到value值3，此时刚好线程B没有被挂起并执行compareAndSwapInt方法比较内存值也为3，成功修改内存值为4，线程B打完收工，一切ok
+     - 这时线程A恢复，执行compareAndSwapInt方法比较，发现自己手里的值数字3和主内存的值数字4不一致，说明该值已经被其他线程抢先一步修改过了，那A线程本次修改失败，只能重新读取重新来一遍了
+     - 线程A重新获取value值，因为变量value被volatile修饰，所以其他线程对它的修改，线程A总是能够看到，线程A继续执行compareAndSwapInt进行比较替换，直到成功
+   ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/casbase.jpg)
+   - 简单总结
+     - CAS(CompareAndSwap) 比较当前工作内存中的值和主内存中的值，如果相同则执行规定操作，否则继续比较直到主内存和工作内存中的值一致为止
+     - CAS应用 CAS有3个操作数，内存值V，旧的预期值A，要修改的更新值B。当且仅当预期值A和内存值V相同时，将内存值V改为B，否则什么都不做
+  
+  - CAS 缺点
+    - 循环时间长开销很大
+      - getAndAddInt方法执行时，由一个do while循环，如果CAS失败，会一直进行尝试，如果CAS长时间一直不成功，可能会给CPU带来很大的开销
+    - 只能保证一个共享变量的原子操作
+      - 当对一个共享变量执行操作时，我们可以使用循环CAS的方式来保证原子操作，但是，对多个共享变量操作时，循环CAS就无法保证操作的原子性，这时就可以用锁来保证原子性
+    - CAS 会导致“ABA问题”
+      - CAS算法实现一个重要前提需要取出内存中某时刻的数据并在当下时刻比较并替换，那么在这个时间差内会导致数据的变化。比如说一个线程one从内存位置V中取出A，这时候另一个线程two也从内存中取出A，并且线程two进行了一些操作将值变成了B，然后线程又将V位置的数据变成A，这时候线程one进行CAS操作发现内存中仍然是A，然后线程one操作成功
+      - 尽管线程one的CAS操作成功，但是不代表这个过程是没有问题的
