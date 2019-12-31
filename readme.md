@@ -101,3 +101,49 @@
     - CAS 会导致“ABA问题”
       - CAS算法实现一个重要前提需要取出内存中某时刻的数据并在当下时刻比较并替换，那么在这个时间差内会导致数据的变化。比如说一个线程one从内存位置V中取出A，这时候另一个线程two也从内存中取出A，并且线程two进行了一些操作将值变成了B，然后线程又将V位置的数据变成A，这时候线程one进行CAS操作发现内存中仍然是A，然后线程one操作成功
       - 尽管线程one的CAS操作成功，但是不代表这个过程是没有问题的
+      
+##　ArrayList线程不安全
+  - 1 故障现象
+    -java.util.ConcurrentModificationException        
+  - 2 导致原因
+    - 并发争抢修改导致，参考我们的花名册签名情况,一个人正在写入，另外一个同学过来抢夺，导致数据不一致异常，并发修改异常             
+  - 3 解决方案
+    - 3.1 new Vector<>();
+    - 3.2 Collections.synchronizedList(new ArrayList<>());
+    - 3.3 new CopyOnWriteArrayList();
+  - 4 优化建议
+      - 写时复制
+        - CopyOnWrite容器即写时复制的容器，往一个容器添加元素的时候，不直接往当前容器Object[]添加，而是先将当前容器Object[]进行copy，复制出一个新的容器Object[] newElements,然后在新的容器Object[] Elements里添加元素，添加完元素之后，再将原容器的引用指向新的容器 setArray(newElements).这样做的好处是可以对CopyOnWrite容器进行并发的读，而不需要加锁，因为当前容器不会添加任何元素。所以CopyOnWrite容器也是一种读写分离的思想，读和写不同的容器
+        ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/copyOnWrite.png)
+        - public boolean add(E e) {
+            final ReentrantLock lock = this.lock;
+                lock.lock();
+            try {
+                Object[] elements = getArray();
+                int len = elements.length;
+                Object[] newElements = Arrays.copyOf(elements, len + 1);
+                newElements[len] = e;
+                setArray(newElements);
+                return true;
+            } finally {
+                lock.unlock();
+            }
+        }
+
+## 锁
+- 公平锁
+  - 是指多个线程按照申请锁的顺序来获取锁，类似排队打饭，先来后到
+- 非公平锁
+  - 是指多个线程获取锁的顺序并不是按照申请锁的顺序，有可能后申请的线程比先申请的线程优先获取锁。在高并发的情况下，有可能会造成优先级反转或者饥饿现象
+- 区别（公平锁/非公平锁）
+  - 并发包中ReentrantLock的创建可以指定构造函数的boolean类型来得到公平锁或非公平锁，默认是非公平锁
+  - 公平锁： Threads acquire a fair lock in the order in which they requested it
+    - 公平锁就是很公平，在并发环境中，每个线程在获取锁时会先查看此锁维护的等待队列，如果为空，或者当前线程是等待队列的第一个，就占有锁，否则就会加入到等待队列中，以后会按照FIFO的规则从队列中取到自己
+  - 非公平锁： a nonfair lock permits barging:threads requesting a lock can jump ahead of the queue of waiting threads if the lock happens to be available when it is requested.
+    - 非公平锁比较粗鲁，上来就直接尝试占有锁，如果尝试失败，就再采用类似公平锁那种方式 
+  - Java ReentrantLock 而言，通过构造函数指定是否是公平锁，默认是非公平锁。非公平锁的优点在于吞吐量比公平锁大。Synchronized也是一种非公平锁
+- 可重入锁（也叫递归锁）
+  - 指的是同一线程外层函数获得锁之后，内层递归函数仍然能获取该锁的代码。在同一线程外层方法获取锁的时候，在进入内层方法会自动获取锁。也就是说，线程可以进入任何一个它已经拥有的锁所同步着的代码块
+- 自旋锁（spinlock）
+  - 指尝试获取锁的线程不会立即阻塞，而是采用循环的方式去尝试获取锁，这样的好处是减少线程上下文切换的消耗，缺点是循环会消耗CPU
+  ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/casGetAndAdd.png) 
