@@ -10,25 +10,46 @@ class MyCache {
     private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public void put (String key, Object value) {
-        System.out.println(Thread.currentThread().getName() + "\t 正在写入：" + key);
+        rwLock.writeLock().lock();
         try {
-            TimeUnit.MILLISECONDS.sleep(300);
-        } catch (InterruptedException e) {
+            System.out.println(Thread.currentThread().getName() + "\t 正在写入：" + key);
+            try {
+                TimeUnit.MILLISECONDS.sleep(300);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            map.put(key, value);
+            System.out.println(Thread.currentThread().getName() + "\t 写入完成：");
+        } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            rwLock.writeLock().unlock();
         }
-        map.put(key, value);
-        System.out.println(Thread.currentThread().getName() + "\t 写入完成：");
+
     }
     public void get (String key) {
-        System.out.println(Thread.currentThread().getName() + "\t 正在读取：" + key);
+
+        rwLock.readLock().lock();
         try {
-            TimeUnit.MILLISECONDS.sleep(300);
-        } catch (InterruptedException e) {
+            System.out.println(Thread.currentThread().getName() + "\t 正在读取：" + key);
+            try {
+                TimeUnit.MILLISECONDS.sleep(300);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            Object result = map.get(key);
+            System.out.println(Thread.currentThread().getName() + "\t 读取完成：" + result);
+        } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            rwLock.readLock().unlock();
         }
-        Object result = map.get(key);
-        System.out.println(Thread.currentThread().getName() + "\t 读取完成：" + result);
     }
+
+    public void clearMap() {
+        map.clear();
+    }
+
 
 }
 
@@ -39,4 +60,25 @@ class MyCache {
  * @create: 2019-12-31 15:39
  */
 public class ReadWriteLockDemo {
+
+    public static void main(String[] args) {
+
+        MyCache myCache = new MyCache();
+
+        for (int i = 0; i < 5; i++) {
+            final int tempInt = i;
+            new Thread(() -> {
+                myCache.put(tempInt + "", tempInt + "");
+            }, String.valueOf(i)).start();
+        }
+
+        for (int i = 0; i < 5; i++) {
+            final int tempInt = i;
+            new Thread(() -> {
+                myCache.get(tempInt + "");
+            }, String.valueOf(i)).start();
+        }
+
+
+    }
 }

@@ -89,7 +89,12 @@
      - 这时线程A恢复，执行compareAndSwapInt方法比较，发现自己手里的值数字3和主内存的值数字4不一致，说明该值已经被其他线程抢先一步修改过了，那A线程本次修改失败，只能重新读取重新来一遍了
      - 线程A重新获取value值，因为变量value被volatile修饰，所以其他线程对它的修改，线程A总是能够看到，线程A继续执行compareAndSwapInt进行比较替换，直到成功
    ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/casbase.jpg)
-   - 简单总结
+   
+  - UnSafe
+    - 1.UnSafe是CAS的核心类由于Java 方法无法直接访问底层 ,需要通过本地(native)方法来访问,UnSafe相当于一个后面,基于该类可以直接操作特额定的内存数据.UnSafe类在于sun.misc包中,其内部方法操作可以向C的指针一样直接操作内存,因为Java中CAS操作的助兴依赖于UNSafe类的方法.注意UnSafe类中所有的方法都是native修饰的,也就是说UnSafe类中的方法都是直接调用操作底层资源执行响应的任务
+    - 2.变量ValueOffset,便是该变量在内存中的偏移地址,因为UnSafe就是根据内存偏移地址获取数据的
+    - 3.变量value和volatile修饰,保证了多线程之间的可见性
+  - 简单总结
      - CAS(CompareAndSwap) 比较当前工作内存中的值和主内存中的值，如果相同则执行规定操作，否则继续比较直到主内存和工作内存中的值一致为止
      - CAS应用 CAS有3个操作数，内存值V，旧的预期值A，要修改的更新值B。当且仅当预期值A和内存值V相同时，将内存值V改为B，否则什么都不做
   
@@ -147,3 +152,26 @@
 - 自旋锁（spinlock）
   - 指尝试获取锁的线程不会立即阻塞，而是采用循环的方式去尝试获取锁，这样的好处是减少线程上下文切换的消耗，缺点是循环会消耗CPU
   ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/casGetAndAdd.png) 
+  
+## 阻塞队列
+- 顾名思义,首先它是一个队列,而一个阻塞队列在数据结构中所起的作用大致如图所示:
+![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/blockingQueue.png) 
+  - 线程1往阻塞队列中添加元素二线程2从队列中移除元素
+  - 当阻塞队列是空时,从队列中获取元素的操作将会被阻塞.
+  - 当阻塞队列是满时,往队列中添加元素的操作将会被阻塞.
+  - 同样，试图往已满的阻塞队列中添加新圆度的线程同样也会被阻塞,知道其他线程从队列中移除一个或者多个元素或者全清空队列后使队列重新变得空闲起来并后续新增
+  - 在多线程领域:所谓阻塞,在某些情况下会挂起线程(即线程阻塞),一旦条件满足,被挂起的线程又会被自动唤醒
+- 为什么需要使用BlockingQueue
+  - 好处是我们不需要关心什么时候需要阻塞线程,什么时候需要唤醒线程,因为BlockingQueue都一手给你包办好了
+  - 在concurrent包 发布以前,在多线程环境下,我们每个程序员都必须自己去控制这些细节,尤其还要兼顾效率和线程安全,而这会给我们的程序带来不小的复杂度.
+- 阻塞队列种类分析
+  - ArrayBlockingQueue: 由数组结构组成的有界阻塞队列
+  - LinkedBlockingQueue: 由链表结构组成的有界（但大小默认值为Integer.MAX_Value）阻塞队列
+  - PriorityBlockingQueue: 支持优先级排序的无界阻塞队列
+  - DelayQueue: 使用优先级队列实现的延迟无界阻塞队列
+  - SynchronousQueue: 不存储元素的阻塞队列，也即单个元素的队列
+    - SynchronousQueue没有容量，与其他BlockingQueue不同,SynchronousQueue是一个不存储元素的BlockingQueue，每个put操作必须要等待一个take操作,否则不能继续添加元素,反之亦然.
+  - LinkedTransferQueue: 由链表结构组成的无界阻塞队列
+  - LinkedBlockingDeque: 由链表结构组成的双向阻塞队列
+  ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/bqmethord.png) 
+  ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/BQcase.png) 
