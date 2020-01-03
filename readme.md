@@ -175,3 +175,23 @@
   - LinkedBlockingDeque: 由链表结构组成的双向阻塞队列
   ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/bqmethord.png) 
   ![Aaron_Swartz](https://raw.githubusercontent.com/silenceren/hand/master/pic/BQcase.png) 
+## synchronized 和 Lock 区别
+- 1 原始构成
+  - synchronized是关键字属于 JVM 层面
+    - monitorenter（底层是通过monitor对象来完成，其实wait/notify等方法也依赖于monitor对象只有在同步块或方法中才能调wait/notify等方法）
+    - monitorexit
+  - Lock 是具体类(java.util.concurrent.locks.Lock),是api层面的锁
+- 2 使用方法
+  - synchronized 不需要用户去手动释放锁，当synchronized代码执行完后系统会自动让线程释放对锁的占用
+  - ReentrantLock 需要用户去手动释放锁若没有主动释放锁，就有可能导致出现死锁现象，需要lock() 和unlock()方法配合 try/finally 语句块来完成
+- 3 等待是否可中断
+  - synchronized 不可中断，除非抛出异常或者正常运行完成
+  - ReentrantLock 可中断
+    - 设置超时方法 tryLock（long timeout， TimeUnit unit）
+    - lockInterruptibly()放代码块中，调用interrupt（）方法可中断
+- 4 加锁是否公平
+  - synchronized 非公平锁
+  - ReentrantLock 两者都可以，默认非公平锁，构造方法可以传入boolean值， true为公平锁， false为非公平锁
+- 5 锁绑定多个条件 Condition
+  - synchronized没有
+  - ReentrantLock用来实现分组唤醒的线程们，可以精确唤醒，而不是像synchronized要么随机唤醒一个线程要么唤醒全部线程
