@@ -25,11 +25,7 @@ public class ABADemo {
 
         new Thread(() -> {
             // 暂停1秒t2线程，保证上面的t1线程完成了一次ABA操作i
-            try {
-                TimeUnit.SECONDS.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            try { TimeUnit.SECONDS.sleep(1); } catch (InterruptedException e) { e.printStackTrace(); }
             System.out.println(atomicReference.compareAndSet(100, 2019) + "\t" +atomicReference.get());
         },"t2").start();
 

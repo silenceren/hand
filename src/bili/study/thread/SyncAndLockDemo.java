@@ -49,7 +49,6 @@ class ShareResource {
             // 1 判断
             while (number != 1) {
                 c1.await();
-
             }
             // 2 干活
             for (int i = 0; i < 5; i++) {
