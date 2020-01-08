@@ -33,8 +33,6 @@ class MyData {
  *   2.4 如何解决原子性？
  *       加sync
  *       使用 juc 下的 AtomicInteger
- *
- *
  */
 public class VolatileDemo {
     public static void main(String[] args) {
