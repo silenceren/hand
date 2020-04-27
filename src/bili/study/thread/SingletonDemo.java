@@ -33,7 +33,9 @@ public class SingletonDemo {
 
         // 并发多线程后，情况发生了变化
         for (int i = 0; i < 10; i++) {
-            new Thread(() -> SingletonDemo.getInstance(), String.valueOf(i)).start();
+            new Thread(() -> {
+                SingletonDemo.getInstance();
+            }, String.valueOf(i)).start();
         }
 
     }
